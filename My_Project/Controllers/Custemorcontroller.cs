@@ -1,6 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using Infrastructure.Database;
 using My_Project.Entity;
+using My_Project.DTO;
 
 namespace BankingApi.Controllers
 {
@@ -20,13 +22,21 @@ namespace BankingApi.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromForm] Customer customer)
+        public async Task<IActionResult> Create([FromForm] CreateCustomerDto dto)
         {
             try
             {
-                if (Request.Form.Files.Count > 0)
+                var customer = new Customer
                 {
-                    var file = Request.Form.Files[0];
+                    Name = dto.Name,
+                    Email = dto.Email,
+                    Phone = dto.Phone,
+                    Address = dto.Address
+                };
+
+                if (dto.ProfilePicture != null)
+                {
+                    var file = dto.ProfilePicture;
                     var uploads = Path.Combine(_env.ContentRootPath, "Uploads");
                     if (!Directory.Exists(uploads)) Directory.CreateDirectory(uploads);
                     var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
@@ -37,7 +47,7 @@ namespace BankingApi.Controllers
                 }
 
                 var created = await _customerService.CreateAsync(customer);
-                return CreatedAtAction("GetById", new { id = created.Id }, created);
+                return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
             }
             catch (Exception ex)
             {
@@ -75,32 +85,34 @@ namespace BankingApi.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromForm] Customer customer)
+        public async Task<IActionResult> Update(int id, [FromForm] CreateCustomerDto dto)
         {
             try
             {
                 var existing = await _customerService.GetByIdAsync(id);
                 if (existing == null) return NotFound();
 
-                existing.Name = customer.Name;
-                existing.Email = customer.Email;
-                existing.Phone = customer.Phone;
-                existing.Address = customer.Address;
+                existing.Name = dto.Name;
+                existing.Email = dto.Email;
+                existing.Phone = dto.Phone;
+                existing.Address = dto.Address;
 
-                if (Request.Form.Files.Count > 0)
+                if (dto.ProfilePicture != null)
                 {
-                    var file = Request.Form.Files[0];
+                    var file = dto.ProfilePicture;
                     var uploads = Path.Combine(_env.ContentRootPath, "Uploads");
                     if (!Directory.Exists(uploads)) Directory.CreateDirectory(uploads);
                     var fileName = $"{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
                     var path = Path.Combine(uploads, fileName);
                     using var stream = new FileStream(path, FileMode.Create);
                     await file.CopyToAsync(stream);
+
                     if (!string.IsNullOrEmpty(existing.ProfilePicturePath))
                     {
                         var oldPath = Path.Combine(_env.ContentRootPath, existing.ProfilePicturePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
                         if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
                     }
+
                     existing.ProfilePicturePath = $"/Uploads/{fileName}";
                 }
 
@@ -120,11 +132,13 @@ namespace BankingApi.Controllers
             {
                 var existing = await _customerService.GetByIdAsync(id);
                 if (existing == null) return NotFound();
+
                 if (!string.IsNullOrEmpty(existing.ProfilePicturePath))
                 {
                     var path = Path.Combine(_env.ContentRootPath, existing.ProfilePicturePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
                     if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
                 }
+
                 var deleted = await _customerService.DeleteAsync(id);
                 if (!deleted) return NotFound();
                 return NoContent();

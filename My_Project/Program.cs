@@ -16,7 +16,7 @@ builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 
 
-var app = builder.Build();
+var app = builder.Build();  
 
 
 if (app.Environment.IsDevelopment())

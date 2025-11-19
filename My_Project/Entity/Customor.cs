@@ -8,6 +8,7 @@ public class Customer
     public string Phone { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public string? ProfilePicturePath { get; set; }
+    
 }
 
 
